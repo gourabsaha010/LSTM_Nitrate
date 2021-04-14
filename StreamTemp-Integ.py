@@ -269,23 +269,7 @@ for seed in Randomseed:
         if 2 in Action:
             TestEPOCH = 2000     # it was 200  # choose the model to test after trained "TestEPOCH" epoches
             # generate a folder name list containing all the tested model output folders
-            caseLst = ['All-2010-2016']#, '494-B247-H100','460-B230-H100' ,'327-B163-H100','258-B129-H100' ,'169-B169-H100', '29-B29-H100']
-            #caseLst =['All-2010-2016', 'All-2010-2016 - 156', 'All-2010-2016 - 1032']
-            #forcing_path = [forcing_path]#,
-                            # os.path.join(os.path.sep, rootDatabase, 'Forcing', 'forcing1%_days_494sites.feather'),
-                            # os.path.join(os.path.sep, rootDatabase, 'Forcing', 'forcing20%_days_460sites.feather'),
-                            # os.path.join(os.path.sep, rootDatabase, 'Forcing', 'forcing70%_days_327sites.feather'),
-                            # os.path.join(os.path.sep, rootDatabase, 'Forcing', 'forcing90%_days_258sites.feather'),
-                            # os.path.join(os.path.sep, rootDatabase, 'Forcing', 'forcing98%_days_169sites.feather'),
-                            # os.path.join(os.path.sep, rootDatabase, 'Forcing', 'forcing100%_days_29sites.feather')]
-            #attr_path = [attr_path]#,
-                         # os.path.join(os.path.sep, rootDatabase, 'Attribute', 'attr1%_days_494sites.feather'),
-                         # os.path.join(os.path.sep, rootDatabase, 'Attribute', 'attr20%_days_460sites.feather'),
-                         # os.path.join(os.path.sep, rootDatabase, 'Attribute', 'attr70%_days_327sites.feather'),
-                         # os.path.join(os.path.sep, rootDatabase, 'Attribute', 'attr90%_days_258sites.feather'),
-                         # os.path.join(os.path.sep, rootDatabase, 'Attribute', 'attr98%_days_169sites.feather'),
-                         # os.path.join(os.path.sep, rootDatabase, 'Attribute', 'attr100%_days_29sites.feather')
-                         # ]
+            caseLst = ['All-2010-2016']
             nDayLst = [] #[1, 3]
             for nDay in nDayLst:
                 caseLst.append('All-85-95-DI' + str(nDay))
