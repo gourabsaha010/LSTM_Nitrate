@@ -5,6 +5,29 @@ import os
 import hydroDL
 from hydroDL.model import rnn
 import pandas as pd
+from datetime import date
+
+def percentage_day_cal(D_N_P):
+    sites = D_N_P['site_no'].unique()
+    tempData = []
+    for ind, s in enumerate(sites):
+        S_training = D_N_P.loc[D_N_P['site_no'] == s, 'S_Training']
+        E_training = D_N_P.loc[D_N_P['site_no'] == s, 'E_Training']
+        d1 = date(S_training[ind].year, S_training[ind].month, S_training[ind].day)
+        d2 = date(E_training[ind].year, E_training[ind].month, E_training[ind].day)
+        delta = d2 - d1
+        tempData.append(delta.days)
+    temp = pd.Series(tempData)
+    D_N_P['no_days'] = temp
+    sumdays = np.sum(temp)
+    tempPercent = []
+    for s in sites:
+        days = D_N_P.loc[D_N_P['site_no'] == s, 'no_days'].values[0]
+        tempPercent.append(days/sumdays)
+    temp1 = pd.Series(tempPercent)
+    D_N_P['day_percent'] = temp1
+    return D_N_P
+
 
 #torch.manual_seed(1)
 def trainModel(model,
@@ -17,16 +40,20 @@ def trainModel(model,
                miniBatch=[100, 30],
                saveEpoch=100,
                saveFolder=None,
-               mode='seq2seq'):
+               mode='seq2seq',
+               D_N_P_path):
     batchSize, rho = miniBatch
     # x- input; z - additional input; y - target; c - constant input
     if type(x) is tuple or type(x) is list:
         x, z = x
     ngrid, nt, nx = x.shape
+    D_N_P = pd.read_excel(D_N_P_path)
+    D_N_P_new = percentage_day_cal(D_N_P)
+    nt_new = D_N_P_new['no_days'].sum()/ngrid
     if c is not None:
         nx = nx + c.shape[-1]
     nIterEp = int(
-        np.ceil(np.log(0.01) / np.log(1 - batchSize * rho / ngrid / nt)))
+        np.ceil(np.log(0.01) / np.log(1 - batchSize * rho / ngrid / nt_new)))
     if hasattr(model, 'ctRm'):
         if model.ctRm is True:
             nIterEp = int(
@@ -49,7 +76,8 @@ def trainModel(model,
         for iIter in range(0, nIterEp):
             # training iterations
             if type(model) in [rnn.CudnnLstmModel, rnn.AnnModel, rnn.CpuLstmModel]:   # What does it mean?
-                iGrid, iT = randomIndex(ngrid, nt, [batchSize, rho])
+                # iGrid, iT = randomIndex(ngrid, nt, [batchSize, rho])
+                iGrid, iT = randomIndex_percentage(ngrid, [batchSize, rho], D_N_P_new)
                 xTrain = selectSubset(x, iGrid, iT, rho, c=c)
                 # xTrain = rho/time * Batchsize * Ninput_var
                 yTrain = selectSubset(y, iGrid, iT, rho)
@@ -140,7 +168,7 @@ def loadModel(outFolder, epoch, modelName='model'):
     return model
 
 
-def testModel(model, x, c, *, batchSize=None, filePathLst=None, doMC=False, outModel=None, savePath=None):
+def testModel(model, x, c, D_N_P_path, *, batchSize=None, filePathLst=None, doMC=False, outModel=None, savePath=None):
     # outModel, savePath: only for R2P-hymod model, for other models always set None
     if type(x) is tuple or type(x) is list:
         x, z = x
@@ -151,6 +179,7 @@ def testModel(model, x, c, *, batchSize=None, filePathLst=None, doMC=False, outM
     else:
         z = None
     ngrid, nt, nx = x.shape
+    D_N_P = pd.read_excel(D_N_P_path)
     if c is not None:
         nc = c.shape[-1]
     ny = model.ny
@@ -339,6 +368,15 @@ def randomSubset(x, y, dimSubset):
     return xTensor, yTensor
 
 
+def randomIndex_percentage(ngrid,dimSubset, D_N_P_new):
+    batchSize, rho = dimSubset
+    iGrid = np.random.choice(list(range(0, ngrid)), size=batchSize, p=D_N_P_new['day_percent'].tolist())
+    iT = []
+    for i in iGrid:
+        nt = D_N_P_new.iloc[i]['no_days']
+        T = np.random.randint(0, nt-rho, [1])[0]
+        iT.append(T)
+    return iGrid, iT
 def randomIndex(ngrid, nt, dimSubset):
     batchSize, rho = dimSubset
     iGrid = np.random.randint(0, ngrid, [batchSize])

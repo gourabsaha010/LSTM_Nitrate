@@ -10,8 +10,8 @@ import json
 from . import Dataframe
 
 # module variable
-tRange = [19800101, 20200101]
-tRangeobs = [19800101, 20200101]    #[19801001, 20161001] #  streamflow observations
+tRange = [20120101, 20200101]
+tRangeobs = [20120101, 20200101]    #[19801001, 20161001] #  streamflow observations
 tLst = utils.time.tRange2Array(tRange)
 tLstobs = utils.time.tRange2Array(tRangeobs)
 nt = len(tLst)
@@ -35,18 +35,24 @@ ntobs = len(tLstobs)
 ################################################################
 
 ##############   Water Temperature for CONUS scale  ##########
-forcingLst = ['dayl(s)', 'prcp(mm/day)', 'srad(W/m2)', 'tmax(C)',
-       'tmin(C)', 'vp(Pa)', '00060_Mean']   #, 'pred_discharge' , '00060_Mean' ,'combine_discharge', 'combine_discharge' 'swe(mm)' ,'outlet_outflow',, 'pred_discharge', , '00060_Mean'
-attrLstSel = ['DRAIN_SQKM',
-
-       'STREAMS_KM_SQ_KM',
-       'STOR_NID_2009', 'FORESTNLCD06', 'PLANTNLCD06',
-       'SLOPE_PCT', 'RAW_DIS_NEAREST_MAJ_DAM',
-
-'PERDUN', 'RAW_DIS_NEAREST_DAM', 'RAW_AVG_DIS_ALL_MAJ_DAMS',
-'T_MIN_BASIN', 'T_MINSTD_BASIN', 'RH_BASIN',  'RAW_AVG_DIS_ALLDAMS', 'PPTAVG_BASIN',
-'HIRES_LENTIC_PCT','T_AVG_BASIN', 'T_MAX_BASIN','T_MAXSTD_BASIN',  'NDAMS_2009', 'ELEV_MEAN_M_BASIN'
-              ] #, 'MAJ_NDAMS_2009',
+forcingLst = ['Discharge_cfs', 'prcp(mm/day)', 'CornLands_ha', 'SoybeanLands_ha',
+              'OtherAgLands_ha', 'ForestLands_ha', 'UrbanLands_ha','FertilizerNTons',
+              'ManureNTons']   #, 'pred_discharge' , '00060_Mean' ,'combine_discharge', 'combine_discharge' 'swe(mm)' ,'outlet_outflow',, 'pred_discharge', , '00060_Mean'
+attrLstSel = ['DRAIN_SQKM', 'ShallowArea_sqkm', 'DeepArea_sqkm',    # 'PPTAVG_BASIN',
+              'ExcessivelyDrainedArea_sqkm', 'WellDrainedArea_sqkm',
+              'PoorlyDrainedArea_sqkm', 'HydGrpAreaA_sqkm', 'HydGrpAreaB_sqkm',
+              'HydGrpAreaC_sqkm', 'HydGrpAreaD_sqkm', 'DominantKfactWS_value',
+              'DominantKfactArea_sqkm', '1stDominantSolTexArea_sqkm',     # '1stDominantSolTex',  '2ndDominantSolTex',
+               '2ndDominantSolTexArea_sqkm']
+#
+#        'STREAMS_KM_SQ_KM',
+#        'STOR_NID_2009', 'FORESTNLCD06', 'PLANTNLCD06',
+#        'SLOPE_PCT', 'RAW_DIS_NEAREST_MAJ_DAM',
+#
+# 'PERDUN', 'RAW_DIS_NEAREST_DAM', 'RAW_AVG_DIS_ALL_MAJ_DAMS',
+# 'T_MIN_BASIN', 'T_MINSTD_BASIN', 'RH_BASIN',  'RAW_AVG_DIS_ALLDAMS', 'PPTAVG_BASIN',
+# 'HIRES_LENTIC_PCT','T_AVG_BASIN', 'T_MAX_BASIN','T_MAXSTD_BASIN',  'NDAMS_2009', 'ELEV_MEAN_M_BASIN'
+#               ] #, 'MAJ_NDAMS_2009',
     # Round1:   'PERDUN', 'RAW_DIS_NEAREST_DAM', 'RAW_AVG_DIS_ALL_MAJ_DAMS',
     # Round2: 'T_MIN_BASIN', 'T_MINSTD_BASIN', 'RH_BASIN',,  'RAW_AVG_DIS_ALLDAMS', 'PPTAVG_BASIN'
     # Round3:  'HIRES_LENTIC_PCT','T_AVG_BASIN', 'T_MAX_BASIN','T_MAXSTD_BASIN',  'NDAMS_2009','ELEV_MEAN_M_BASIN',

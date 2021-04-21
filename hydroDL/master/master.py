@@ -525,7 +525,7 @@ def train(mDict):
 
 
 def test(out,
-         TempTarget, forcing_path, attr_path,
+         TempTarget, forcing_path, attr_path, D_N_P_path,
          *,
          tRange,
          subset,
@@ -562,7 +562,7 @@ def test(out,
         # c = None # temporary test
         model = loadModel(out, epoch=epoch)
         hydroDL.model.train.testModel(
-            model, x, c, batchSize=batchSize, filePathLst=filePathLst, doMC=doMC)
+            model, x, c, D_N_P_path, batchSize=batchSize, filePathLst=filePathLst, doMC=doMC)
     else:
         print('Loaded previous results')
         df, x, obs, c = loadData(optData, TempTarget, forcing_path, attr_path, readX=False)

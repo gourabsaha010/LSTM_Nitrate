@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from hydroDL.data import camels
 from hydroDL.model import rnn, crit, train
 from hydroDL.post import plot, stat
-
+from hydroDL.utils import time
 
 import numpy as np
 import os
@@ -17,15 +17,15 @@ import math
 import random
 
 forcing_list = [
-                'forcing_99%_days_99sites.feather'
+                'forcings48.feather'
                 ]
 attr_list = [
-             'attr_temp99%_days_99sites.feather'
+             'attributes48.feather'
              ]
 
-Batch_list = [ 47]
-Hidden_list = [100, 100, 100]
-Randomseed = [ 1, 2, 3, 4, 5]
+Batch_list = [24]
+Hidden_list = [50]
+Randomseed = [0]
 for seed in Randomseed:
     for f_list, a_list, b_list, h_list in zip(forcing_list, attr_list, Batch_list, Hidden_list):
 
@@ -42,14 +42,14 @@ for seed in Randomseed:
         # 0,1: do both at the same time
         # 1: train DI model
         # 2: test trained models
-        Action = [0, 2]  # it was [0 , 1]
+        Action = [2]  # it was [0 , 1]
         # Set hyperparameters for training or retraining
-        EPOCH = 2000
+        EPOCH = 2
         BATCH_SIZE = b_list
-        RHO = 365
+        RHO = 120
         HIDDENSIZE = h_list
-        saveEPOCH = 100   # it was 50
-        Ttrain = [20101001, 20141001]  # Training period. it was [19851001, 19951001]
+        saveEPOCH = 1   # it was 50
+        Ttrain = [20120101, 20190701]  # Training period. it was [19851001, 19951001]
 
         #### Set hyperparameters for Pre-training the model #####
         retrained = False   # True: means you want to train a pre-trained model, False: means you want to train a new model
@@ -60,7 +60,7 @@ for seed in Randomseed:
         pre_HIDDENSIZE = 100
         pre_RHO = 365
         ###############################
-        TempTarget = '00010_Mean'   # 'obs' or     or Q9Tw   '00010_Mean'  outlet_tave_water
+        TempTarget = 'Nitrate_mg_per_L'   # 'obs' or     or Q9Tw   '00010_Mean'  outlet_tave_water
 
 
         absRoot = os.getcwd()
@@ -72,11 +72,11 @@ for seed in Randomseed:
         rootOut = os.path.join(os.path.sep, absRoot, 'TempDemo', 'FirstRun')  # Model output root directory: /data/rnnStreamflow
 
         forcing_path = os.path.join(os.path.sep, rootDatabase, 'Forcing', 'Forcing_new', f_list)  # obs_18basins
-        forcing_data =[]#pd.read_feather(forcing_path)
+        forcing_data =[]   #pd.read_feather(forcing_path)
         attr_path = os.path.join(os.path.sep, rootDatabase, 'Forcing', 'attr_new', a_list)
-        attr_data =[]#pd.read_feather(attr_path)
+        attr_data =[]      #pd.read_feather(attr_path)
         camels.initcamels(forcing_data, attr_data, TempTarget, rootDatabase)  # initialize three camels module-scope variables in camels.py: dirDB, gageDict, statDict
-
+        D_N_P_path = os.path.join(os.path.sep, rootDatabase, 'Forcing', 'Forcing_new', 'D_N_P.xlsx')
 
 
         # Define all the configurations into dictionary variables
@@ -219,7 +219,8 @@ for seed in Randomseed:
                     nEpoch=EPOCH,
                     miniBatch=[BATCH_SIZE, RHO],
                     saveEpoch=saveEPOCH,
-                    saveFolder=out1)
+                    saveFolder=out1,
+                    D_N_P_path=D_N_P_path)
             elif interfaceOpt==0: # directly train the model using dictionary variable
                 master.train(masterDict)
 
@@ -267,7 +268,7 @@ for seed in Randomseed:
 
         # Test models
         if 2 in Action:
-            TestEPOCH = 2000     # it was 200  # choose the model to test after trained "TestEPOCH" epoches
+            TestEPOCH = 2     # it was 200  # choose the model to test after trained "TestEPOCH" epoches
             # generate a folder name list containing all the tested model output folders
             caseLst = ['All-2010-2016']
             nDayLst = [] #[1, 3]
@@ -278,7 +279,7 @@ for seed in Randomseed:
             else:
                 outLst = [os.path.join(rootOut, save_path, x) for x in caseLst]
             subset = 'All'  # 'All': use all the CAMELS gages to test; Or pass the gage list
-            tRange = [20141001, 20161001]  # Testing period
+            tRange = [20120101, 20200101]  # Testing period
             predLst = list()
             obsLst = list()
             predLst_res = list()
@@ -286,11 +287,27 @@ for seed in Randomseed:
             statDictLst = []
             for i, out in enumerate(outLst):
                 #df, pred, obs = master.test(out, TempTarget, forcing_path[i], attr_path[i], tRange=tRange, subset=subset, basinnorm=True, epoch=TestEPOCH, reTest=True)
-                df, pred, obs, x = master.test(out, TempTarget, forcing_path, attr_path, tRange=tRange, subset=subset, basinnorm=False, epoch=TestEPOCH, reTest=True)
+                df, pred, obs, x = master.test(out, TempTarget, forcing_path, attr_path, D_N_P_path, tRange=tRange, subset=subset, basinnorm=False, epoch=TestEPOCH, reTest=True)
 
                 # change the units ft3/s to m3/s
                 #obs = obs * 0.0283168
                 #pred = pred * 0.0283168
+                ### We are substitute the obs into NaN outside the testing period, according to D_N_P file
+                D_N_P = pd.read_excel(D_N_P_path)
+                for ii in range(obs.shape[0]):
+                    tLst1 = D_N_P.iloc[ii]['S_Testing']
+                    tLst2 = D_N_P.iloc[ii]['E_Testing']
+                    tArray1 = time.tRange2Array([int(str(tLst1.year) + str(tLst1.month).zfill(2) + str(tLst1.day).zfill(2)),
+                                                 int(str(tLst2.year) + str(tLst2.month).zfill(2) + str(tLst2.day).zfill(2))])
+                    tArray2 = time.tRange2Array(tRange)
+                    C, ind1, ind2 = np.intersect1d(tArray1, tArray2, return_indices=True)
+                    obs[ii, ~ind2, :] = np.nan
+
+
+
+
+                #####################################################################
+
                 predLst.append(pred) # the prediction list for all the models
                 obsLst.append(obs)
                 np.save(os.path.join(out, 'pred.npy'), pred)
