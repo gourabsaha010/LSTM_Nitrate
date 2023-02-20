@@ -35,10 +35,16 @@ ntobs = len(tLstobs)
 ################################################################
 
 ##############   Water Temperature for CONUS scale  ##########
-forcingLst = ['Discharge_cfs', 'prcp(mm/day)', 'CornLands_ha', 'SoybeanLands_ha',
-              'OtherAgLands_ha', 'ForestLands_ha', 'UrbanLands_ha','FertilizerNTons',
-              'ManureNTons']   #, 'pred_discharge' , '00060_Mean' ,'combine_discharge', 'combine_discharge' 'swe(mm)' ,'outlet_outflow',, 'pred_discharge', , '00060_Mean'
-attrLstSel = ['DRAIN_SQKM', 'ShallowArea_sqkm', 'DeepArea_sqkm',    # 'PPTAVG_BASIN',
+forcingLst = ['prcp(cm/day)', '00060_Mean', 'dayl_sec', 'Tmax_degC', 'Tmin_degC', 'CornLands_sqkm', 'SoybeanLands_sqkm',
+              'OtherAgLands_sqkm', 'ForestLands_sqkm', 'UrbanLands_sqkm', 'FertilizerNTons', 'ManureNTons',
+               'Nitrate_mgPerL_WQS0001', '00060_WQS0001']
+
+#'Nitrate_mgPerL_USGS05482300', '00060_USGS05482300', 'Nitrate_mgPerL_USGS05482000', '00060_USGS05482000'
+#'Nitrate_mgPerL_WQS0001', '00060_WQS0001', 'Nitrate_mgPerL_USGS05465500', '00060_USGS05465500',
+#'Nitrate_mgPerL_USGS05482500', '00060_USGS05482500', 'Nitrate_mgPerL_USGS05482000', '00060_USGS05482000',
+# 'Nitrate_mgPerL_WQS0003', '00060_WQS0003', 'Nitrate_mgPerL_WQS0007', '00060_WQS0007'
+#'prcp(mm/day)', '00060_Mean', 'dayl_sec', 'Tmax_degC', 'Tmin_degC', 'RegionNO3_Mean', 'LocalNO3_Mean' 'combine_discharge', 'combine_discharge' 'swe(mm)' ,'outlet_outflow',, 'pred_discharge', , '00060_Mean'
+attrLstSel = ['DRAIN_SQKM', 'ShallowArea_sqkm', 'DeepArea_sqkm', 'PPTAVG_BASIN',
               'ExcessivelyDrainedArea_sqkm', 'WellDrainedArea_sqkm',
               'PoorlyDrainedArea_sqkm', 'HydGrpAreaA_sqkm', 'HydGrpAreaB_sqkm',
               'HydGrpAreaC_sqkm', 'HydGrpAreaD_sqkm', 'DominantKfactWS_value',
@@ -280,7 +286,7 @@ def calStatbasinnorm(x):  # for daily streamflow normalized by basin area and pr
     # meanprep = readAttr(gageDict['id'], ['q_mean'])
     temparea = np.tile(basinarea, ( x.shape[1], 1)).transpose()
     tempprep = np.tile(meanprep, ( x.shape[1],1)).transpose()
-    flowua = (x * 0.0283168 * 3600 * 24) / ((temparea * (10 ** 6)) * (tempprep * 10 ** (-2))/365) # unit (m^3/day)/(m^3/day)
+    flowua = (x * 3600 * 24) / ((temparea * (10 ** 6)) * (tempprep * 10 ** (-2))/365) # unit (m^3/day)/(m^3/day) [for cfs to m3/S, conversion factor: 0.0283168]
     a = flowua.flatten()
     b = a[~np.isnan(a)] # kick out Nan
     b = np.log10(np.sqrt(b)+0.1) # do some tranformation to change gamma characteristics plus 0.1 for 0 values
@@ -311,7 +317,7 @@ def calStatAll():
     x = readForcing(idLst, forcingLst)
     for k in range(len(forcingLst)):
         var = forcingLst[k]
-        if var=='prcp(mm/day)':
+        if var=='prcp(mm/day)' or var == 'prcp(cm/day)':
             statDict[var] = calStatgamma(x[:, :, k])
         elif var=='00060_Mean':
             statDict[var] = calStatbasinnorm(x[:, :, k])
@@ -344,12 +350,12 @@ def transNorm(x, varLst, *, toNorm):
         stat = statDict[var]
         if toNorm is True:
             if len(x.shape) == 3:
-                if var == 'prcp(mm/day)' or var == '00060_Mean' or var == 'combine_discharge':
+                if var == 'prcp(mm/day)' or var =='prcp(cm/day)' or var == '00060_Mean' or var == 'combine_discharge':
                     x[:, :, k] = np.log10(np.sqrt(x[:, :, k]) + 0.1)
 
                 out[:, :, k] = (x[:, :, k] - stat[2]) / stat[3]
             elif len(x.shape) == 2:
-                if var == 'prcp(mm/day)' or var == '00060_Mean' or var == 'combine_discharge':
+                if var == 'prcp(mm/day)' or var == 'prcp(cm/day)' or var == '00060_Mean' or var == 'combine_discharge':
                     x[:, k] = np.log10(np.sqrt(x[:, k]) + 0.1)
                 out[:, k] = (x[:, k] - stat[2]) / stat[3]
         else:
@@ -360,7 +366,7 @@ def transNorm(x, varLst, *, toNorm):
 
             elif len(x.shape) == 2:
                 out[:, k] = x[:, k] * stat[3] + stat[2]
-                if var == 'prcp(mm/day)' or var == '00060_Mean' or var == 'combine_discharge':
+                if var == 'prcp(mm/day)' or var == 'prcp(cm/day)' or var == '00060_Mean' or var == 'combine_discharge':
                     out[:, k] = (np.power(10, out[:, k]) - 0.1) ** 2
 
 
@@ -383,10 +389,10 @@ def basinNorm(x, gageid, toNorm):
     temparea = np.tile(basinarea, ( x.shape[1], 1)).transpose()
     tempprep = np.tile(meanprep, (x.shape[1], 1)).transpose()
     if toNorm is True:
-        flow = (x * 0.0283168 * 3600 * 24) / ((temparea * (10 ** 6)) * (tempprep * 10 ** (-2))/365) # (m^3/day)/(m^3/day)
+        flow = (x * 3600 * 24) / ((temparea * (10 ** 6)) * (tempprep * 10 ** (-2))/365) # (m^3/day)/(m^3/day) [for cfs to m3/S, conversion factor: 0.0283168]
     else:
 
-        flow = x * ((temparea * (10 ** 6)) * (tempprep * 10 ** (-2))/365)/(0.0283168 * 3600 * 24)
+        flow = x * ((temparea * (10 ** 6)) * (tempprep * 10 ** (-2))/365)/(3600 * 24) # (m^3/day)/(m^3/day) [for cfs to m3/S, conversion factor: 0.0283168]
     if nd == 3:
         flow = np.expand_dims(flow, axis=2)
     return flow

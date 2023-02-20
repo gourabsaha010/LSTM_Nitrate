@@ -559,6 +559,8 @@ def test(out,
     if reTest is True:
         print('Runing new results')
         df, x, obs, c = loadData(optData, TempTarget, forcing_path, attr_path, out)
+        ##
+        #x[:, :, 13] = 1.25 * x[:, :, 13] # precip = 0;  discharge = 1; dayl = 2; tmax = 3; tmin = 4;  Nitrate_mgPerL = 12; 00060_input = 13
         # c = None # temporary test
         model = loadModel(out, epoch=epoch)
         hydroDL.model.train.testModel(

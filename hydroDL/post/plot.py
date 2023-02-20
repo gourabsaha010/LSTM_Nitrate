@@ -127,6 +127,416 @@ def plotBoxF(data,
         fig.suptitle(title)
     return fig
 
+
+def TempSeries_4_Plots_Nitrate(attr_path, statDictLst_res, obs, predLst, TempTarget, tRange, boxPlotName, rootOut, save_path, sites=18, Stations=None, retrained=False):
+    # fig, axes = plt.subplots(2, 2, figsize=(13, 9), constrained_layout=True)
+    # axes = axes.flat
+    npred = 2  # 2  # plot the first two prediction: Base LSTM and DI(1)
+    #subtitle = ['(seg_id_nat:1450)', '(seg_id_nat:1566)', '(seg_id_nat:1718)', '(seg_id_nat:2013)']
+    txt = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)', '(g)', '(h)']
+    ylabel = 'Nitrate Concentration (mg/L)'
+
+
+    seg_id_nat = []
+    inputdata = pd.read_feather(attr_path)
+    # tRange = [20141001, 20161001]
+    gage = []
+    if Stations == None:
+        seg_id_nat = inputdata['site_no'].unique()
+    else:
+        seg_id_nat = Stations
+    if sites > len(seg_id_nat):
+        sites = len(seg_id_nat)
+    AA = random.sample(range(0, len(seg_id_nat)), sites)
+    AA.sort()
+    BB = [seg_id_nat[(x)] for x in AA]
+    seg_id_nat = BB
+    #seg_id_nat.sort()
+    gage = [jj for jj in range(sites)]
+    for i in range(1):
+        gageindex = gage  #[i * 4:(i + 1) * 4]
+        print(gageindex)
+        t = utils.time.tRange2Array(tRange)
+        fig, axes = plt.subplots(2, 1, figsize=(10.7, 13), constrained_layout=True)
+        axes = axes.flat
+        npred = len(predLst)  # 2  # plot the first two prediction: Base LSTM and DI(1)
+        # subtitle = txt[i] + ' (Station ID:' + str(seg_id_nat[i]) + ') '
+        # if i < (math.ceil(len(gage) / 4) - 1):
+        #     subtitle = ['(a) (Station ID:' + str(seg_id_nat[4 * i]) + ') ',
+        #                 '(b) (Station ID:' + str(seg_id_nat[4 * i + 1]) + ') ',
+        #                 '(c) (Station ID:' + str(seg_id_nat[4 * i + 2]) + ') ',
+        #                 '(d) (Station ID:' + str(seg_id_nat[4 * i + 3]) + ') ']
+        # elif i == (math.ceil(len(gage) / 4) - 1):
+        #     if ((len(gage)) - (i * 4)) == 1:
+        #         subtitle = ['(Station ID:' + str(seg_id_nat[4 * i + 0]) + ')']
+        #     elif ((len(gage)) - (i * 4)) == 2:
+        #         subtitle = ['(Station ID:' + str(seg_id_nat[4 * i + 0]) + ')'
+        #             , '(Station ID:' + str(seg_id_nat[4 * i + 1]) + ')']
+        #     elif ((len(gage)) - (i * 4)) == 3:
+        #         subtitle = ['(Station ID:' + str(seg_id_nat[4 * i + 0]) + ')'
+        #             , '(Station ID:' + str(seg_id_nat[4 * i + 1]) + ')'
+        #             , '(Station ID:' + str(seg_id_nat[4 * i + 2]) + ')']
+        #txt = ['a', 'b', 'c', 'd']
+        ylabel = 'Nitrate Concentration (mg/L)'
+
+        for k in range(len(gageindex)):
+            # iGrid = AA[gageindex[k]]
+            iGrid = inputdata.index[inputdata['site_no'] == seg_id_nat[AA[gageindex[k]]]].values[0]
+            yPlot = [obs[iGrid, :]]
+            for y in predLst[0:npred]:
+                yPlot.append(y[iGrid, :])
+            # get the NSE value of LSTM and DI(1) model
+            # Metrics = '[' + str(np.round(statDictLst_res[0]['RMSE'][iGrid], 2)) +',\n'+str(np.round(statDictLst_res[0]['NSE'][iGrid], 2)) + ',' +str(np.round(statDictLst_res[0]['Corr'][iGrid], 2)) + ',\n' +str(np.round(statDictLst_res[0]['NSE_res'][iGrid], 2)) + ',' +str(np.round(statDictLst_res[0]['Corr_res'][iGrid], 2)) + ']'
+            # subtitle1 = txt[k] + ' (Site: ' + str(seg_id_nat[k]) + ') ' + \
+            subtitle1 =  ' (Site: ' + str(seg_id_nat[k]) + ') ' +\
+                '[' + "RMSE: " + \
+                      str(np.round(statDictLst_res[0]['RMSE'][iGrid], 2))  +  \
+                ', ' +  "NSE: " + str(np.round(statDictLst_res[0]['NSE'][iGrid], 2))  + \
+                ', ' +  "Bias: " + str(np.round(statDictLst_res[0]['Bias'][iGrid], 2))  + \
+                ', ' +  "Corr: " + str(np.round(statDictLst_res[0]['Corr'][iGrid], 2))  + \
+                ', ' +  "KGE: " + str(np.round(statDictLst_res[0]['KGE'][iGrid], 2)) + \
+                ']'
+             #NSE_LSTM = [] #str(round(statDictLst[0]['NSE'][iGrid], 2))
+            # NSE_DI1 = str(round(statDictLst[1]['NSE'][iGrid], 2))
+            # plot time series
+            plotTS(
+                t,
+                yPlot,
+                ax=axes[k],
+                cLst='rkcbbkrmg',
+                markerLst='o---+1o---+1',
+                legLst=['Observed', "Hindcasted", 'Predicted_test', 'Predicted_train',
+                        'Observed1',"Hindcasted1", 'Predicted_test1', 'Predicted_train1'],
+                title=subtitle1, linespec=['o', '-', '-', '-', ':', '+'],  #legLst=legLst=[TempTarget, 'LSTM: ' + NSE_LSTM], title=subtitle[k]
+                ylabel=ylabel , figNo=k)  # ['USGS', 'LSTM: '+NSE_LSTM, 'DI(1): '+NSE_DI1]
+        #boxPlotName = 'Time Series simulated and observed data in testing period- values in brackets are [RMSE, NSE, Bias, NSE_res, Corr_res]'
+        fig.suptitle(boxPlotName, fontsize=12.2)
+
+        #plotName = "TempSeries.eps"
+        plotName = "TempSeries.png"
+
+
+        if retrained is True:
+            plt.savefig(os.path.join(rootOut, out_retrained, plotName), dpi=200)
+            plt.savefig(os.path.join(rootOut, out_retrained, '-LowRes'+plotName))
+        else:
+            plt.savefig(os.path.join(rootOut, save_path, plotName), dpi=200, bbox_inches='tight' )
+            plt.savefig(os.path.join(rootOut, save_path, '-LowRes'+plotName), bbox_inches='tight' )
+        fig.show()
+
+def TempSeries_4_Plots_Nitrate2(attr_path, statDictLst_res, obs, predLst, TempTarget, tRange, boxPlotName, rootOut, save_path, sites=18, Stations=None, retrained=False):
+    # fig, axes = plt.subplots(2, 2, figsize=(13, 9), constrained_layout=True)
+    # axes = axes.flat
+    npred = 2  # 2  # plot the first two prediction: Base LSTM and DI(1)
+    #subtitle = ['(seg_id_nat:1450)', '(seg_id_nat:1566)', '(seg_id_nat:1718)', '(seg_id_nat:2013)']
+    txt = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)', '(g)', '(h)']
+    ylabel = 'Nitrate Concentration (mg/L)'
+
+
+    seg_id_nat = []
+    inputdata = pd.read_feather(attr_path)
+    # tRange = [20141001, 20161001]
+    gage = []
+    if Stations == None:
+        seg_id_nat = inputdata['site_no'].unique()
+    else:
+        seg_id_nat = Stations
+    if sites > len(seg_id_nat):
+        sites = len(seg_id_nat)
+    AA = random.sample(range(0, len(seg_id_nat)), sites)
+    AA.sort()
+    BB = [seg_id_nat[(x)] for x in AA]
+    seg_id_nat = BB
+    #seg_id_nat.sort()
+    gage = [jj for jj in range(sites)]
+    for i in range(1):
+        gageindex = gage  #[i * 4:(i + 1) * 4]
+        print(gageindex)
+        t = utils.time.tRange2Array(tRange)
+        fig, axes = plt.subplots(2, 1, figsize=(10.7, 13), constrained_layout=True)
+        axes = axes.flat
+        npred = len(predLst)  # 2  # plot the first two prediction: Base LSTM and DI(1)
+        # subtitle = txt[i] + ' (Station ID:' + str(seg_id_nat[i]) + ') '
+        # if i < (math.ceil(len(gage) / 4) - 1):
+        #     subtitle = ['(a) (Station ID:' + str(seg_id_nat[4 * i]) + ') ',
+        #                 '(b) (Station ID:' + str(seg_id_nat[4 * i + 1]) + ') ',
+        #                 '(c) (Station ID:' + str(seg_id_nat[4 * i + 2]) + ') ',
+        #                 '(d) (Station ID:' + str(seg_id_nat[4 * i + 3]) + ') ']
+        # elif i == (math.ceil(len(gage) / 4) - 1):
+        #     if ((len(gage)) - (i * 4)) == 1:
+        #         subtitle = ['(Station ID:' + str(seg_id_nat[4 * i + 0]) + ')']
+        #     elif ((len(gage)) - (i * 4)) == 2:
+        #         subtitle = ['(Station ID:' + str(seg_id_nat[4 * i + 0]) + ')'
+        #             , '(Station ID:' + str(seg_id_nat[4 * i + 1]) + ')']
+        #     elif ((len(gage)) - (i * 4)) == 3:
+        #         subtitle = ['(Station ID:' + str(seg_id_nat[4 * i + 0]) + ')'
+        #             , '(Station ID:' + str(seg_id_nat[4 * i + 1]) + ')'
+        #             , '(Station ID:' + str(seg_id_nat[4 * i + 2]) + ')']
+        #txt = ['a', 'b', 'c', 'd']
+        ylabel = 'Nitrate Concentration (mg/L)'
+
+        for k in range(len(gageindex)):
+            # iGrid = AA[gageindex[k]]
+            iGrid = inputdata.index[inputdata['site_no'] == seg_id_nat[AA[gageindex[k]]]].values[0]
+            yPlot = [obs[iGrid, :]]
+            for y in predLst[0:npred]:
+                yPlot.append(y[iGrid, :])
+            # get the NSE value of LSTM and DI(1) model
+            # Metrics = '[' + str(np.round(statDictLst_res[0]['RMSE'][iGrid], 2)) +',\n'+str(np.round(statDictLst_res[0]['NSE'][iGrid], 2)) + ',' +str(np.round(statDictLst_res[0]['Corr'][iGrid], 2)) + ',\n' +str(np.round(statDictLst_res[0]['NSE_res'][iGrid], 2)) + ',' +str(np.round(statDictLst_res[0]['Corr_res'][iGrid], 2)) + ']'
+            # subtitle1 = txt[k] + ' (Site: ' + str(seg_id_nat[k]) + ') ' + \
+            subtitle1 =  ' (Site: ' + str(seg_id_nat[k]) + ') ' +\
+                '[' + "RMSE: " + \
+                      str(np.round(statDictLst_res[0]['RMSE'][iGrid], 2))  +  \
+                ', ' +  "NSE: " + str(np.round(statDictLst_res[0]['NSE'][iGrid], 2))  + \
+                ', ' +  "Bias: " + str(np.round(statDictLst_res[0]['Bias'][iGrid], 2))  + \
+                ', ' +  "Corr: " + str(np.round(statDictLst_res[0]['Corr'][iGrid], 2))  + \
+                ', ' +  "KGE: " + str(np.round(statDictLst_res[0]['KGE'][iGrid], 2)) + \
+                ']'
+             #NSE_LSTM = [] #str(round(statDictLst[0]['NSE'][iGrid], 2))
+            # NSE_DI1 = str(round(statDictLst[1]['NSE'][iGrid], 2))
+            # plot time series
+            plotTS(
+                t,
+                yPlot,
+                ax=axes[k],
+                cLst='rkcbmkrmg',
+                markerLst='o-----+1o-----+1',
+                legLst=['Observed', "Hindcasted", 'Predicted_test', 'Predicted_train',
+                        'Observed1',"Hindcasted1", 'Predicted_test1', 'Predicted_train1'],
+                title=subtitle1, linespec=['o', '-', '-', '-', '-', ':', '+'],  #legLst=legLst=[TempTarget, 'LSTM: ' + NSE_LSTM], title=subtitle[k]
+                ylabel=ylabel , figNo=k)  # ['USGS', 'LSTM: '+NSE_LSTM, 'DI(1): '+NSE_DI1]
+        #boxPlotName = 'Time Series simulated and observed data in testing period- values in brackets are [RMSE, NSE, Bias, NSE_res, Corr_res]'
+        fig.suptitle(boxPlotName, fontsize=12.2)
+
+        #plotName = "TempSeries.eps"
+        plotName = "TempSeries.png"
+
+
+        if retrained is True:
+            plt.savefig(os.path.join(rootOut, out_retrained, plotName), dpi=200)
+            plt.savefig(os.path.join(rootOut, out_retrained, '-LowRes'+plotName))
+        else:
+            plt.savefig(os.path.join(rootOut, save_path, plotName), dpi=200, bbox_inches='tight' )
+            plt.savefig(os.path.join(rootOut, save_path, '-LowRes'+plotName), bbox_inches='tight' )
+        fig.show()
+        
+# def TempSeries_2_Plots_NO3_pred(attr_path, statDictLst_res, obs, predLst, TempTarget, tRange, boxPlotName, rootOut, save_path, sites=18, Stations=None, retrained=False):
+def TempSeries_2_Plots_NO3_pred(attr_path, obs_np_train, obs_np_test,
+                                pred_np_winter_total,
+                                 pred_np_spring_total,
+                                 pred_np_summer_total,
+                                 pred_np_fall_total,
+                                 TempTarget, tRange,
+                                boxPlotName, rootOut, save_path,
+                                sites=8, Stations=None, retrained=False):
+
+    # fig, axes = plt.subplots(2, 2, figsize=(13, 9), constrained_layout=True)
+    # axes = axes.flat
+    npred = 2  # 2  # plot the first two prediction: Base LSTM and DI(1)
+    #subtitle = ['(seg_id_nat:1450)', '(seg_id_nat:1566)', '(seg_id_nat:1718)', '(seg_id_nat:2013)']
+    txt = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)', '(g)', '(h)']
+    ylabel = 'Nitrate Concentration (mg/L)'
+
+
+    seg_id_nat = []
+    inputdata = pd.read_feather(attr_path)
+    # tRange = [20141001, 20161001]
+    gage = []
+    if Stations == None:
+        seg_id_nat = inputdata['site_no'].unique()
+    else:
+        seg_id_nat = Stations
+    if sites > len(seg_id_nat):
+        sites = len(seg_id_nat)
+    AA = random.sample(range(0, len(seg_id_nat)), sites)
+    AA.sort()
+    BB = [seg_id_nat[(x)] for x in AA]
+    seg_id_nat = BB
+    #seg_id_nat.sort()
+    gage = [jj for jj in range(sites)]
+    for i in range(1):
+        gageindex = gage  #[i * 4:(i + 1) * 4]
+        print(gageindex)
+        t = utils.time.tRange2Array(tRange)
+        fig, axes = plt.subplots(2, 1, figsize=(10.7, 13), constrained_layout=True)
+        axes = axes.flat
+        npred = 4   #len(predLst)  # 2  # plot the first two prediction: Base LSTM and DI(1)
+        # subtitle = txt[i] + ' (Station ID:' + str(seg_id_nat[i]) + ') '
+        # if i < (math.ceil(len(gage) / 4) - 1):
+        #     subtitle = ['(a) (Station ID:' + str(seg_id_nat[4 * i]) + ') ',
+        #                 '(b) (Station ID:' + str(seg_id_nat[4 * i + 1]) + ') ',
+        #                 '(c) (Station ID:' + str(seg_id_nat[4 * i + 2]) + ') ',
+        #                 '(d) (Station ID:' + str(seg_id_nat[4 * i + 3]) + ') ']
+        # elif i == (math.ceil(len(gage) / 4) - 1):
+        #     if ((len(gage)) - (i * 4)) == 1:
+        #         subtitle = ['(Station ID:' + str(seg_id_nat[4 * i + 0]) + ')']
+        #     elif ((len(gage)) - (i * 4)) == 2:
+        #         subtitle = ['(Station ID:' + str(seg_id_nat[4 * i + 0]) + ')'
+        #             , '(Station ID:' + str(seg_id_nat[4 * i + 1]) + ')']
+        #     elif ((len(gage)) - (i * 4)) == 3:
+        #         subtitle = ['(Station ID:' + str(seg_id_nat[4 * i + 0]) + ')'
+        #             , '(Station ID:' + str(seg_id_nat[4 * i + 1]) + ')'
+        #             , '(Station ID:' + str(seg_id_nat[4 * i + 2]) + ')']
+        #txt = ['a', 'b', 'c', 'd']
+        ylabel = 'Nitrate Concentration (mg/L)'
+
+        for k in range(len(gageindex)):
+            # iGrid = AA[gageindex[k]]
+            iGrid = inputdata.index[inputdata['site_no'] == seg_id_nat[AA[gageindex[k]]]].values[0]
+            yPlot = [obs_np_train[iGrid, :]]
+            yPlot.append(obs_np_test[iGrid, :])
+
+            yPlot.append(pred_np_winter_total[iGrid, :])
+            yPlot.append(pred_np_spring_total[iGrid, :])
+            yPlot.append(pred_np_summer_total[iGrid, :])
+            yPlot.append(pred_np_fall_total[iGrid, :])
+
+            # get the NSE value of LSTM and DI(1) model
+            # Metrics = '[' + str(np.round(statDictLst_res[0]['RMSE'][iGrid], 2)) +',\n'+str(np.round(statDictLst_res[0]['NSE'][iGrid], 2)) + ',' +str(np.round(statDictLst_res[0]['Corr'][iGrid], 2)) + ',\n' +str(np.round(statDictLst_res[0]['NSE_res'][iGrid], 2)) + ',' +str(np.round(statDictLst_res[0]['Corr_res'][iGrid], 2)) + ']'
+            # subtitle1 = txt[k] + ' (Site: ' + str(seg_id_nat[k]) + ') ' + \
+            subtitle1 = ' (Site: ' + str(seg_id_nat[k]) + ') '
+
+             #NSE_LSTM = [] #str(round(statDictLst[0]['NSE'][iGrid], 2))
+            # NSE_DI1 = str(round(statDictLst[1]['NSE'][iGrid], 2))
+            # plot time series
+            plotTS(
+                t,
+                yPlot,
+                ax=axes[k],
+                #cLst='rkcbmkrmg',
+                cLst=["red", "blue", "lightcoral", "turquoise", "violet", "lightgreen"],
+                markerLst='o*-----+1o-----+1',
+                legLst=['Obs training', "Obs test", 'Pred winter', 'Pred spring',
+                        'Pred summer',"Pred fall"],
+                title=subtitle1, linespec=['o', 'o', '-', '-', '-', '-', ':', '+'],  #legLst=legLst=[TempTarget, 'LSTM: ' + NSE_LSTM], title=subtitle[k]
+                ylabel=ylabel , figNo=k)  # ['USGS', 'LSTM: '+NSE_LSTM, 'DI(1): '+NSE_DI1]
+        #boxPlotName = 'Time Series simulated and observed data in testing period- values in brackets are [RMSE, NSE, Bias, NSE_res, Corr_res]'
+        fig.suptitle(boxPlotName, fontsize=12.2)
+
+        #plotName = "TempSeries.eps"
+        plotName = "TempSeries.png"
+        plotName1 = "TempSeries.eps"
+
+
+        if retrained is True:
+            plt.savefig(os.path.join(rootOut, out_retrained, plotName), dpi=200)
+            plt.savefig(os.path.join(rootOut, out_retrained, '-LowRes'+plotName))
+            plt.savefig(os.path.join(rootOut, out_retrained, plotName1), dpi=200)
+            plt.savefig(os.path.join(rootOut, out_retrained, '-LowRes'+plotName1))
+        else:
+            plt.savefig(os.path.join(rootOut, save_path, plotName), dpi=200, bbox_inches='tight')
+            plt.savefig(os.path.join(rootOut, save_path, '-LowRes'+plotName), bbox_inches='tight')
+            plt.savefig(os.path.join(rootOut, save_path, plotName1), dpi=200, bbox_inches='tight')
+            plt.savefig(os.path.join(rootOut, save_path, '-LowRes'+plotName1), bbox_inches='tight')
+        fig.show()
+
+def TempSeries_Seasonal_Plots_N03(attr_path, statDictLst_res, obs, obs_np_test, predLst, TempTarget, tRange, boxPlotName, rootOut, save_path, sites=18, Stations=None, retrained=False):  ## save_path,
+    # fig, axes = plt.subplots(2, 2, figsize=(13, 9), constrained_layout=True)
+    # axes = axes.flat
+    npred = 2  # 2  # plot the first two prediction: Base LSTM and DI(1)
+    #subtitle = ['(seg_id_nat:1450)', '(seg_id_nat:1566)', '(seg_id_nat:1718)', '(seg_id_nat:2013)']
+    txt = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)', '(g)', '(h)']
+    ylabel = 'Nitrate Concentration (mg/L)'
+
+
+    seg_id_nat = []
+    inputdata = pd.read_feather(attr_path)
+    # tRange = [20141001, 20161001]
+    gage = []
+    if Stations == None:
+        seg_id_nat = inputdata['site_no'].unique()
+    else:
+        seg_id_nat = Stations
+    if sites > len(seg_id_nat):
+        sites = len(seg_id_nat)
+    AA = random.sample(range(0, len(seg_id_nat)), sites)
+    AA.sort()
+    BB = [seg_id_nat[(x)] for x in AA]
+    seg_id_nat = BB
+    #seg_id_nat.sort()
+    gage = [jj for jj in range(sites)]
+    for i in range(1):
+        gageindex = gage  #[i * 4:(i + 1) * 4]
+        print(gageindex)
+        t = utils.time.tRange2Array(tRange)
+        
+
+       
+        fig, axes = plt.subplots(2, 1, figsize=(10.7, 13), constrained_layout=True)
+        axes = axes.flat
+        npred = len(predLst)  # 2  # plot the first two prediction: Base LSTM and DI(1)
+        # subtitle = txt[i] + ' (Station ID:' + str(seg_id_nat[i]) + ') '
+        # if i < (math.ceil(len(gage) / 4) - 1):
+        #     subtitle = ['(a) (Station ID:' + str(seg_id_nat[4 * i]) + ') ',
+        #                 '(b) (Station ID:' + str(seg_id_nat[4 * i + 1]) + ') ',
+        #                 '(c) (Station ID:' + str(seg_id_nat[4 * i + 2]) + ') ',
+        #                 '(d) (Station ID:' + str(seg_id_nat[4 * i + 3]) + ') ']
+        # elif i == (math.ceil(len(gage) / 4) - 1):
+        #     if ((len(gage)) - (i * 4)) == 1:
+        #         subtitle = ['(Station ID:' + str(seg_id_nat[4 * i + 0]) + ')']
+        #     elif ((len(gage)) - (i * 4)) == 2:
+        #         subtitle = ['(Station ID:' + str(seg_id_nat[4 * i + 0]) + ')'
+        #             , '(Station ID:' + str(seg_id_nat[4 * i + 1]) + ')']
+        #     elif ((len(gage)) - (i * 4)) == 3:
+        #         subtitle = ['(Station ID:' + str(seg_id_nat[4 * i + 0]) + ')'
+        #             , '(Station ID:' + str(seg_id_nat[4 * i + 1]) + ')'
+        #             , '(Station ID:' + str(seg_id_nat[4 * i + 2]) + ')']
+        #txt = ['a', 'b', 'c', 'd']
+        ylabel = 'Nitrate Concentration (mg/L)'
+
+        for k in range(len(gageindex)):
+            
+            # iGrid = AA[gageindex[k]]
+            iGrid = inputdata.index[inputdata['site_no'] == seg_id_nat[AA[gageindex[k]]]].values[0]
+            yPlot = [obs[iGrid, :]]
+            yPlot.append(obs_np_test[iGrid, :])
+            for y in predLst[0:npred]:
+                yPlot.append(y[iGrid, :])
+            # get the NSE value of LSTM and DI(1) model
+            # Metrics = '[' + str(np.round(statDictLst_res[0]['RMSE'][iGrid], 2)) +',\n'+str(np.round(statDictLst_res[0]['NSE'][iGrid], 2)) + ',' +str(np.round(statDictLst_res[0]['Corr'][iGrid], 2)) + ',\n' +str(np.round(statDictLst_res[0]['NSE_res'][iGrid], 2)) + ',' +str(np.round(statDictLst_res[0]['Corr_res'][iGrid], 2)) + ']'
+            # subtitle1 = txt[k] + ' (Site: ' + str(seg_id_nat[k]) + ') ' + \
+            subtitle1 =  ' (Site: ' + str(seg_id_nat[k]) + ') ' +\
+                '[' + "RMSE: " + \
+                      str(np.round(statDictLst_res[0]['RMSE'][iGrid], 2))  +  \
+                ', ' +  "NSE: " + str(np.round(statDictLst_res[0]['NSE'][iGrid], 2))  + \
+                ', ' +  "Bias: " + str(np.round(statDictLst_res[0]['Bias'][iGrid], 2))  + \
+                ', ' +  "Corr: " + str(np.round(statDictLst_res[0]['Corr'][iGrid], 2))  + \
+                ', ' +  "KGE: " + str(np.round(statDictLst_res[0]['KGE'][iGrid], 2)) + \
+                ']'
+             #NSE_LSTM = [] #str(round(statDictLst[0]['NSE'][iGrid], 2))
+            # NSE_DI1 = str(round(statDictLst[1]['NSE'][iGrid], 2))
+            # plot time series
+            plotTS_NO3(
+                t,
+                yPlot,
+                ax=axes[k],
+                # cLst='rkcbmkrmg',
+                cLst = ["red", "blue", "lightgreen", "lightcoral", "turquoise", "violet"],
+                markerLst='o*-----+1o-----+1',
+                legLst=['Obs_train', "obs_test", 'winter', 'spring',
+                        'summer',"fall"],
+                title=subtitle1, linespec=['o', '*', '-', '-', '-', '-', ':', '+'],  #legLst=legLst=[TempTarget, 'LSTM: ' + NSE_LSTM], title=subtitle[k]
+                ylabel=ylabel , figNo=k)  # ['USGS', 'LSTM: '+NSE_LSTM, 'DI(1): '+NSE_DI1]
+        #boxPlotName = 'Time Series simulated and observed data in testing period- values in brackets are [RMSE, NSE, Bias, NSE_res, Corr_res]'
+        fig.suptitle(boxPlotName, fontsize=12.2)
+
+        plotName_eps = "TempSeries.eps"
+        plotName_png = "TempSeries.png"
+
+
+        if retrained is True:
+            plt.savefig(os.path.join(rootOut, save_path, out_retrained, plotName_png), dpi=200) ## save_path,
+            plt.savefig(os.path.join(rootOut, save_path, out_retrained, '-LowRes'+plotName_png)) ## save_path,
+            plt.savefig(os.path.join(rootOut, save_path, out_retrained, plotName_eps), dpi=200) ## save_path,
+            plt.savefig(os.path.join(rootOut, save_path, out_retrained, '-LowRes'+plotName_eps)) ## save_path,
+        else:
+            plt.savefig(os.path.join(rootOut, save_path, plotName_png), dpi=200, bbox_inches='tight')  ## save_path,
+            plt.savefig(os.path.join(rootOut, save_path, '-LowRes'+plotName_png), bbox_inches='tight') ## save_path,
+            plt.savefig(os.path.join(rootOut, save_path, plotName_eps), dpi=200, bbox_inches='tight') ## save_path,
+            plt.savefig(os.path.join(rootOut, save_path, '-LowRes'+plotName_eps), bbox_inches='tight') ## save_path,
+        fig.show()
+
+
 def plotMultiBoxFig(data,
                label1=None,
                label2=None,
@@ -188,6 +598,78 @@ def plotMultiBoxFig(data,
 
 
 def plotTS(t,
+           y,
+           *,
+           ax=None,
+           tBar=None,
+           figsize=(12, 4),
+           cLst='rbkgcmy',
+           markerLst=None,
+           linespec=None,
+           legLst=None,
+           title=None,
+           linewidth=2,
+           ylabel=None,
+           figNo=None):
+    newFig = False
+    if ax is None:
+        fig = plt.figure(figsize=figsize)
+        ax = fig.subplots()
+        newFig = True
+
+    if type(y) is np.ndarray:
+        y = [y]
+    for k in range(len(y)):
+        tt = t[k] if type(t) is list else t
+        yy = y[k]
+        legStr = None
+        if legLst is not None:
+            legStr = legLst[k]
+        if markerLst is None:
+            if True in np.isnan(yy):
+                ax.plot(tt, yy, '*', color=cLst[k], label=legStr)
+            else:
+                ax.plot(
+                    tt, yy, color=cLst[k], label=legStr, linewidth=linewidth)
+        else:
+            if markerLst[k] is '-':
+                if linespec is not None:
+                    ax.plot(tt, yy, color=cLst[k], label=legStr, linestyle=linespec[k], lw=1.15)
+                else:
+                    ax.plot(tt, yy, color=cLst[k], label=legStr, lw=1.15)
+            else:
+                ax.scatter(
+                    tt, yy, color=cLst[k], label=legStr, marker=markerLst[k], s=5)
+        if ylabel is not None:
+            if figNo % 2 == 0:
+                ax.set_ylabel(ylabel)
+        #ax.set_xlim([np.min(tt), np.max(tt)])
+    if tBar is not None:
+        ylim = ax.get_ylim()
+        tBar = [tBar] if type(tBar) is not list else tBar
+        for tt in tBar:
+            ax.plot([tt, tt], ylim, '-k')
+
+    if legLst is not None:
+        ax.legend(loc='lower right', frameon=False)
+    if title is not None:
+        ax.set_title(title, loc='center', fontsize=10.5)
+    #ax.xaxis.set_major_locator(MultipleLocator(7))
+    ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=3, maxticks=7))
+    #ax.set_xticks([np.min(tt), np.min(tt) + 180, np.min(tt)+365, np.max(tt)], [np.min(tt), np.min(tt) + 180, np.min(tt)+365, np.max(tt)])
+    #ax.set_xticklabels( [np.min(tt), np.min(tt) + 90, np.min(tt) + 180, np.min(tt) + 270 , np.min(tt)+365, np.max(tt)], fontsize=8)
+    for tick in ax.xaxis.get_major_ticks():
+
+        tick.label.set_fontsize(11)
+        # specify integer or one of preset strings, e.g.
+        # tick.label.set_fontsize('x-small')
+        #tick.label.set_rotation('vertical')
+    if newFig is True:
+        return fig, ax
+    else:
+        return ax
+
+def plotTS_NO3(t,
            y,
            *,
            ax=None,
@@ -903,7 +1385,7 @@ def TempSeries_4_Plots_ERL(attr_path, statDictLst_res, obs, predLst, TempTarget,
     npred = 2  # 2  # plot the first two prediction: Base LSTM and DI(1)
     #subtitle = ['(seg_id_nat:1450)', '(seg_id_nat:1566)', '(seg_id_nat:1718)', '(seg_id_nat:2013)']
     txt = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)', '(g)', '(h)']
-    ylabel = 'Stream Temperature ($\mathregular{deg}$ C)'
+    ylabel = 'Nitrate Concentration (mg/L)'
 
 
     seg_id_nat = []
@@ -946,7 +1428,7 @@ def TempSeries_4_Plots_ERL(attr_path, statDictLst_res, obs, predLst, TempTarget,
         #             , '(Station ID:' + str(seg_id_nat[4 * i + 1]) + ')'
         #             , '(Station ID:' + str(seg_id_nat[4 * i + 2]) + ')']
         #txt = ['a', 'b', 'c', 'd']
-        ylabel = 'Stream Temperature ($\mathregular{deg}$ C)'
+        ylabel = 'Nitrate Concentration (mg/L)'
 
         for k in range(len(gageindex)):
             # iGrid = AA[gageindex[k]]
@@ -961,8 +1443,8 @@ def TempSeries_4_Plots_ERL(attr_path, statDictLst_res, obs, predLst, TempTarget,
                       str(np.round(statDictLst_res[0]['RMSE'][iGrid], 2)) + \
                 ',' + str(np.round(statDictLst_res[0]['NSE'][iGrid], 2)) + \
                 ',' + str(np.round(statDictLst_res[0]['Bias'][iGrid], 2)) + \
-                ',' + str(np.round(statDictLst_res[0]['NSE_res'][iGrid], 2)) + \
-                ',' + str(np.round(statDictLst_res[0]['Corr_res'][iGrid], 2)) + \
+                ',' + str(np.round(statDictLst_res[0]['Corr'][iGrid], 2)) + \
+                ',' + str(np.round(statDictLst_res[0]['R2'][iGrid], 2)) + \
                 ']'
              #NSE_LSTM = [] #str(round(statDictLst[0]['NSE'][iGrid], 2))
             # NSE_DI1 = str(round(statDictLst[1]['NSE'][iGrid], 2))
@@ -973,7 +1455,7 @@ def TempSeries_4_Plots_ERL(attr_path, statDictLst_res, obs, predLst, TempTarget,
                 ax=axes[k],
                 cLst='bkrmg',
                 markerLst='o---+1',
-                legLst=['obs', 'model>(10%)'], title=subtitle1, linespec=['o', '-', '-', '-', ':', '+'],  #legLst=[TempTarget, 'LSTM: ' + NSE_LSTM], title=subtitle[k]
+                legLst=['obs', 'predict'], title=subtitle1, linespec=['o', '-', '-', '-', ':', '+'],  #legLst=[TempTarget, 'LSTM: ' + NSE_LSTM], title=subtitle[k]
                 ylabel=ylabel , figNo=k)  # ['USGS', 'LSTM: '+NSE_LSTM, 'DI(1): '+NSE_DI1]
         #boxPlotName = 'Time Series simulated and observed data in testing period- values in brackets are [RMSE, NSE, Bias, NSE_res, Corr_res]'
         fig.suptitle(boxPlotName, fontsize=12.2)
