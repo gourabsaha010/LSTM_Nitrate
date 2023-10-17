@@ -301,7 +301,3 @@ Feng, DP., Lawson, K., and CP. Shen, Mitigating prediction error of deep learnin
 
 Feng, DP, K. Fang and CP. Shen, Enhancing streamflow forecast and extracting insights using continental-scale long-short term memory networks with data integration, Water Resources Research (2020), https://doi.org/10.1029/2019WR026793
 
-
-The file is under construction ...
-
-The content will be available soon. 
