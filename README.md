@@ -24,16 +24,14 @@ The LSTM_Nitrate model requires graphics processing unit (GPU) to run the model.
 
 # Name                    Version          Build  Channel
 argon2-cffi               20.1.0           py37h2bbff1b_1
-
 arrow-cpp                 3.0.0            py37h0d1d0e5_0
-
 async_generator           1.10             py37h28b3542_0
-
 attrs                     20.3.0             pyhd3eb1b0_0
 backcall                  0.2.0              pyhd3eb1b0_0
 basemap                   1.2.2                    pypi_0    pypi
 blas                      1.0                         mkl
 bleach                    3.3.0              pyhd3eb1b0_0
+
 boost-cpp                 1.73.0              h2bbff1b_11
 brotli                    1.0.9                ha925a31_2
 bzip2                     1.0.8                he774522_0
